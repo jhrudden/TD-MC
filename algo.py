@@ -1,6 +1,6 @@
 from gymnasium import Env
-from tqdm import trange
-from typing import Callable, Optional
+from tqdm import trange, tqdm
+from typing import Callable, Optional, List
 import numpy as np
 from collections import defaultdict
 
@@ -167,4 +167,71 @@ def on_policy_mc_control_fv(env: Env, policy_builder: Callable, gamma: float, n_
     V = {state: np.max(action_values) for state, action_values in Q.items()}
     return V, policy, Q, all_episodes
 
+def off_policy_mc_prediction(env: Env, gamma: float, pre_generated_eps: List, verbose: bool = False):
+    """
+    Off-policy Monte Carlo prediction algorithm for estimating the value function of a target policy using n_episodes.
 
+    Args:
+        env: The environment to use
+        gamma: The discount factor
+        pre_generated_eps: Pre-generated episodes to use (generated using a behavior policy)
+        verbose: Whether to print the progress of the algorithm
+    """
+    C = defaultdict(lambda: np.zeros(env.action_space.n))
+    Q = defaultdict(lambda: np.zeros(env.action_space.n))
+
+    # use range instead of trange to avoid tqdm overhead when verbose is False
+    if verbose:
+        items_ = tqdm(pre_generated_eps, desc="Episodes")
+    else:
+        items_ = pre_generated_eps
+    for episode in items_:
+        G = 0
+        W = 1
+        for t in range(len(episode) - 1, -1, -1):
+            state, action, action_prob, reward = episode[t]
+            G = gamma * G + reward
+            C[state][action] += W
+            Q[state][action] += (W / C[state][action]) * (G - Q[state][action])
+            if action != np.argmax(Q[state]):
+                break
+            W *= 1 / action_prob
+    V = {state: np.max(action_values) for state, action_values in Q.items()}
+    Q = {state: action_values for state, action_values in Q.items()}
+    return Q, V
+
+
+def on_policy_mc_Q_prediction(env: Env, policy: Callable, gamma: float, n_episodes: int, verbose: bool = False):
+    """
+    On-policy Monte Carlo prediction algorithm for estimating the action-value function of a policy using n_episodes.
+    First-visit method is used.
+
+    Args:
+        env: The environment to use
+        policy: The policy to evaluate
+        gamma: The discount factor
+        n_episodes: The number of episodes to use
+        verbose: Whether to print the progress of the algorithm
+    
+    Returns:
+        The action-value function estimates and the action-value function estimates for each episode
+    """
+    Q = defaultdict(lambda: np.zeros(env.action_space.n))
+    N = defaultdict(lambda: np.zeros(env.action_space.n))
+
+    # use range instead of trange to avoid tqdm overhead when verbose is False
+    if verbose:
+        range_ = trange(n_episodes)
+    else:
+        range_ = range(n_episodes)
+    for i in range_:
+        episode = generate_episode(env, policy)
+        fv_map = get_time_steps_first_visit(episode, is_state_action_pair=True)
+        G = 0
+        for t in range(len(episode) - 1, -1, -1):
+            state, action, action_prob, reward = episode[t]
+            G = gamma * G + reward
+            if fv_map[(state, action)] == t:
+                N[state][action] += 1
+                Q[state][action] += (G - Q[state][action]) / N[state][action]
+    return Q
