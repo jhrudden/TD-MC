@@ -17,11 +17,17 @@ def equiprobable_policy(env):
         return (action, 1 / env.action_space.n)
     return policy
 
-def greedy_epsilon_policy(env, Q, epsilon):
+def greedy_epsilon_policy(env, Q, epsilon, break_ties_randomly=True):
     def policy(observation):
+        argmax_ = np.argmax
+        if break_ties_randomly: # use custom argmax function if we want to break ties randomly
+            argmax_ = argmax_rand
         action_probs = np.ones(env.action_space.n, dtype=float) * epsilon / env.action_space.n
-        max_action = argmax_rand(Q[observation]) # breaks ties randomly
+        max_action = argmax_(Q[observation]) # breaks ties randomly
         action_probs[max_action] += 1 - epsilon 
         action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
         return (action, action_probs[action])
     return policy
+
+def greedy_policy(env, Q, break_ties_randomly=True):
+    return greedy_epsilon_policy(env, Q, 0, break_ties_randomly)
