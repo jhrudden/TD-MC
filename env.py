@@ -1,7 +1,7 @@
 import gymnasium as gym
 from gymnasium import Env, spaces, register
 from enum import IntEnum
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Dict
 from numpy import ndarray
 import numpy as np
 
@@ -37,6 +37,21 @@ class RandomWalk(Env):
         self.observation_space = spaces.Discrete(7)
 
     def step(self, action: RandomWalkAction):
+        """
+        Take one step in the environment.
+
+        Takes in an action and returns the (next state, reward, done, info).
+
+        Args:
+            action (Action): an action provided by the agent
+        
+        Returns:
+            state (int): next state
+            reward (float): reward for this transition
+            done (bool): whether the episode has ended, in which case further step() calls will return undefined results
+            truncated (bool): whether the episode was truncated (not used in this environment)
+            info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning). Not used in this assignment.
+        """
         assert self.action_space.contains(action)
         if action == 0:
             self.state = max(0, self.state - 1)
@@ -54,7 +69,16 @@ class RandomWalk(Env):
             done = False
         return self.state, reward, done, False, {}
 
-    def reset(self):
+    def reset(self, options: Dict = {}):
+        """
+        Reset the environment to the starting state
+
+        Args:
+            options (dict): options for the environment (not used in this environment)
+        
+        Returns:
+            state (int): returns the initial state
+        """
         self.state = 3
         return self.state, {}
 
@@ -157,7 +181,7 @@ class FourRoomsEnv(Env):
             (spaces.Discrete(self.rows), spaces.Discrete(self.cols))
         )
 
-    def reset(self, options) -> Tuple[int, int]:
+    def reset(self, options: Dict = {}) -> Tuple[int, int]:
         """Reset agent to the starting position.
 
         Args:
