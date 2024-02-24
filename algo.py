@@ -189,13 +189,18 @@ def off_policy_mc_prediction(env: Env, gamma: float, pre_generated_eps: List, ve
         G = 0
         W = 1
         for t in range(len(episode) - 1, -1, -1):
+            if W == 0:
+                break
             state, action, action_prob, reward = episode[t]
+            
             G = gamma * G + reward
             C[state][action] += W
             Q[state][action] += (W / C[state][action]) * (G - Q[state][action])
-            if action != np.argmax(Q[state]):
-                break
-            W *= 1 / action_prob
+            pi_action_prob = 0
+            if action == np.argmax(Q[state]):
+                pi_action_prob = 1
+            W *= pi_action_prob / action_prob
+
     V = {state: np.max(action_values) for state, action_values in Q.items()}
     Q = {state: action_values for state, action_values in Q.items()}
     return Q, V
@@ -204,7 +209,6 @@ def off_policy_mc_prediction(env: Env, gamma: float, pre_generated_eps: List, ve
 def on_policy_mc_Q_prediction(env: Env, policy: Callable, gamma: float, n_episodes: int, verbose: bool = False):
     """
     On-policy Monte Carlo prediction algorithm for estimating the action-value function of a policy using n_episodes.
-    First-visit method is used.
 
     Args:
         env: The environment to use
