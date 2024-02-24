@@ -26,6 +26,15 @@ def plot_policy_on_grid_world(env, Q, title="Policy", save_path=None):
                 ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='yellow', alpha=0.3))  # Fill cell for terminal state
             action = np.argmax(actions_estimates)
 
+            if state == env.unwrapped.goal_pos:
+                # add a star for the goal state
+                ax.text(j, i, u'\u2605', fontsize=12, ha='center', va='center')
+                continue # Skip drawing arrows for terminal state
+                
+            if state == env.unwrapped.start_pos:
+                #  add green patch for the start state
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='green', alpha=0.3))  # Fill cell for start state
+
             if action == 0: # left
                 plt.arrow(j, i, -0.3, 0, head_width=0.1, head_length=0.1)
             elif action == 1: # doin 
@@ -34,6 +43,7 @@ def plot_policy_on_grid_world(env, Q, title="Policy", save_path=None):
                 plt.arrow(j, i, 0.3, 0, head_width=0.1, head_length=0.1)
             elif action == 3: # up
                 plt.arrow(j, i, 0, 0.3, head_width=0.1, head_length=0.1)
+
 
     ax.set_aspect('equal')
     ax.set_xlim(-0.5,env.unwrapped.cols-0.5)
@@ -79,8 +89,22 @@ def plot_grid_world_value_function(env, V: Dict, title: Optional[str] = None, sa
     # Loop over data dimensions and create text annotations.
     for i in range(V.shape[0]):
         for j in range(V.shape[1]):
-            text = ax.text(j, i, f'{V[i, j]:.3f}',
-                           ha="center", va="center", color="black", fontsize=10)
+            state = (j, abs(i - V.shape[0] + 1))
+            if state in env.unwrapped.walls:
+                # add black patch for the wall
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='white'))
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='black', alpha=0.8))  # Fill cell for walls
+            elif state == env.unwrapped.goal_pos:
+                # add a star for the goal state
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='white'))
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='green', alpha=0.6))  # Fill cell for terminal state
+                ax.text(j, i, u'\u2605', fontsize=20, ha='center', va='center')
+            else:
+                if state == env.unwrapped.start_pos:
+                    #  add green patch for the start state
+                    ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color='white',  alpha=1, fill=None, lw=3)) # Add border to start state
+                text = ax.text(j, i, f'{V[i, j]:.3f}',
+                            ha="center", va="center", color="black", fontsize=10)
 
     if title:
         # add some padding to the title
